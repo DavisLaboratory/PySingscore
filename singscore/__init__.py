@@ -1,1 +1,1 @@
-from singscore import score, rank
+from .singscore import score, rank, plotdispersion, plotrankdist
