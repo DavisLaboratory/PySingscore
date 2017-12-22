@@ -20,7 +20,8 @@ def getsignature(path):
 
     return s
 
-def normalisation(norm_method, score_list, score, library_len, sig_len):
+def normalisation(norm_method, score_list, score, library_len, sig_len,
+                  mad = True):
 
     """
 
@@ -36,14 +37,20 @@ def normalisation(norm_method, score_list, score, library_len, sig_len):
 
     if norm_method == 'standard':
         norm = score / library_len
-        u = numpy.array(score_list) / library_len
+        if mad:
+            u = numpy.array(score_list) / library_len
     elif norm_method == 'theoretical':
         low_bound = (library_len + 1) / 2
         upper_bound = library_len - ((sig_len - 1) / 2)
-        u = ((numpy.array(score_list)) - low_bound) / (upper_bound - low_bound)
         norm = (score - low_bound) / (upper_bound - low_bound)
+        if mad:
+            u = ((numpy.array(score_list)) - low_bound) / (upper_bound - low_bound)
 
-    return norm, u
+
+    if mad:
+        return norm, u
+    else:
+        return norm
 
 def normalisation_rank(norm_method, ranks, library_len, sig_len):
 
@@ -175,7 +182,7 @@ def score(up_gene, sample, down_gene = False,norm_method = 'standard',
                                         },index=[i])
         else: # default, regardless of down gene list, just make total
             # score
-            temp_df = pandas.DataFrame({'score':total_score},
+            temp_df = pandas.DataFrame({'total_score':total_score},
                                        index=[i])
 
         if len(data.columns) == 0:
@@ -548,3 +555,180 @@ def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
         print('No dispersion values present, please re-run score with '
               'full_data = True')
 
+
+def permutate(sample, n_up, n_down = False, reps= 100, norm_method =
+            'standard', rs_down = 0):
+
+        """
+        Bootstrap a random population of scores for a given sample, that is
+        dependent on a the number of genes in a signature. Take a sample and
+        score it with randomly selected genes from a gene list. Returns a
+        dataframe the length of the permutations (reps) desired with each
+        column corresponding to a sample.
+
+        :param sample:  sample is a dataframe containing the expression data
+                        from at least one sample (more may be used).
+        :param n_up:    the number of genes in the up gene signature
+        :param n_down:  the number of gens in the down signature, may be false
+        :param reps:    the number of permutations, default is 10000
+        :param norm_method: the normalisation method, should be the same as
+                            the one used to score the sample with the actual
+                            signature. Default is standard
+        :param rs_down:     default 0, if n_down is 0, then this is the default
+                            down score, used to calculate total score
+        :return:    a dataframe containing the permutated scores, each column
+                    is a sample.
+        """
+        # set seed
+        numpy.random.seed(555)
+        # dataframe for permutated scores
+        null = pandas.DataFrame()
+
+        for s in sample.columns:
+            scores = [] # empty list to append scores to
+            # for efficiency sort the sample once
+            up_sort = sample[s].rank(method = 'min', ascending = True)
+            if n_down:
+                down_sort = sample[s].rank(method = 'min', ascending = False)
+
+            # permutate
+            for r in range(reps):
+                # select n_up genes at random
+                up_gene = numpy.random.choice(sample.index, n_up,
+                                              replace=False)
+                ru = [] # empty list to append up score to
+                # find the rank of the genes
+                for ug in up_gene:
+                    if ug in up_sort.index:
+                        ru.append(up_sort.get_value(ug,s))
+                # calculate the mean of ranks
+                rs_up = numpy.mean(ru)
+                # normalise
+                rs_up = normalisation(norm_method = norm_method,
+                                      score_list=ru, score = rs_up,
+                                      mad=False, library_len=len(
+                        sample.index), sig_len= n_up)
+
+                if n_down:
+                    # select n_down genes
+                    down_gene = numpy.random.choice(sample.index, n_down,
+                                                    replace=False)
+                    rd = [] # an empty list to append down scores to
+                    # find the rank of genes
+                    for dg in down_gene:
+                        if dg in down_sort.index:
+                            rd.append(down_sort.get_value(dg, s))
+                    # find the mean down rank
+                    rs_down = numpy.mean(rd)
+                    # normalise
+                    rs_down = normalisation(norm_method=norm_method, score =
+                                            rs_down, score_list=rd, mad=False,
+                                            library_len=len(sample.index),
+                                            sig_len=n_down)
+                #   calculate the random score and append to scores list
+                rs = rs_down + rs_up
+                scores.append(rs)
+
+            # null column = sample = scores
+            null[s] = scores
+        return null
+
+def empiricalpval(permutations, score):
+
+    """
+    The empirical p value is the probability of observing a score greater
+    than observed based on the permutation of the sample.
+
+    p = (r + 1)/(m + 1), where r is the number of scores in the permutated
+    data that is greater than the actual score and m is the number of
+    permutations
+
+    :param permutations: the dataframe outputted from permutations function
+    :param score:   the score calculated from the actual signature in the
+                    samples in the permutations dataframe
+    :return: a dataframe of empirical p values, each row representing a sample
+    """
+    # dictionary for p values
+    emp_p = {}
+
+    for sample in permutations.columns:
+        # check if the sample is the same as the row in score
+        if sample in score.index:
+            # extract the score
+            s = score.get_value(sample, 'total_score')
+            # calculate r = number of permutated scores greater than the
+            # actual score
+            r = len(permutations[permutations[sample]>s]) + 1
+            # m = the number of permutations
+            m = len(permutations[sample]) + 1
+            p = r/m
+            # add an entry to the p dictionary sample:pvalue
+            emp_p[sample] = p
+    # create a data frame of p values
+    emp = pandas.DataFrame.from_dict(data=emp_p, orient='index')
+    emp = emp.rename(columns={0:'empirical p value'})
+
+    return emp
+
+def nulldistribution(permutations, score,  nrows = 1, ncols = 1,
+                     counter = 0, outpath = False, show = True, color =
+                     'grey', threshold = False):
+
+    """
+    Generate histogram/density plot of permutated data, with actual score
+    indicated by a vertical line (blue) and a significance threshold
+    indicated by red vertical line
+
+    :param permutations:    a dataframe of permutated scores, output from the
+                            permutations function
+    :param score: a dataframe of scores for the samples
+    :param nrows:   number of rows for graph grid, if single sample,
+                    nrows should be 1
+    :param ncols:   number of cols for graph grid, if single sample,
+                    ncols should be 1
+    :param counter: the initial placement of the graph in the grid
+    :param outpath: if the figure is to be saved, the outpath
+    :param show: show the graph, defualt True
+    :param color: colour for the graph, default grey
+    :param threshold: a significance threshold to mark on the graph
+    :return: matplotlib.figure.Figure
+    """
+
+    # set the style of the graphs to have no background or spines
+    seaborn.set_style('ticks')
+
+    # define the grid set up for the plots
+    grid = definegrid(nrows=nrows, ncols=ncols)
+    grid_outer = grid[0]
+    ax_list = grid[1]
+    # set figure size
+    fig = matplotlib.pyplot.figure(figsize=(10 * ncols, 10 * nrows))
+
+    for p in permutations:
+
+        # set the placement of the graph
+        inner = gridspec.GridSpecFromSubplotSpec(nrows=1, ncols=1,
+                                             subplot_spec=
+                                             grid_outer[ax_list[counter]])
+        counter = counter + 1
+        ax = fig.add_subplot(inner[0, 0])
+        # distribution plot
+        seaborn.distplot(permutations[p],hist=True, kde_kws={'color':color},
+                         label='null distribution',ax=ax, hist_kws={
+                'color':color})
+        ax.set_xlabel('Score')
+        ax.set_ylabel('Density')
+        ax.axvline(score.get_value(p,'total_score'), color = 'b')
+        # if threshold is true then calculate what the 0.05 ie 95th percentile
+        if threshold:
+            t = numpy.percentile(permutations[p], ((1-threshold)*100))
+            ax.axvline(x = t, color = 'r', linestyle = 'dashed' )
+        ax.set_title(p)
+        seaborn.despine()
+
+    if outpath:
+        matplotlib.pyplot.savefig(outpath)
+    if show:
+        matplotlib.pyplot.show()
+
+    return fig
