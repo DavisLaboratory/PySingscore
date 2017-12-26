@@ -1,24 +1,40 @@
-import pandas, sys, os, numpy, pandas, matplotlib, matplotlib.pyplot, itertools, \
-    seaborn, scipy, scipy.stats
-from matplotlib import gridspec, lines, patches
+import matplotlib
+import matplotlib.pyplot
+import numpy
+import pandas
+import seaborn
+from matplotlib import gridspec, patches
 
+from exception import InvalidNormalisation
 
 
 def getsignature(path):
     """
+    Return the signature as a list od gene id's. If the IDs are digits,
+    such as Entrez ID then, ensure that an int is added to the list, for the
+    sake of consistency.
 
     :param path: path to the signature must have no header
-    :return: a list containing all the genes in the signature
+    :return: s, a list containing all the genes in the signature
     """
-    sig = open(path, 'rt')
-    s = []
-    for line in sig.readlines():
-        if line.strip().isdigit():
-            s.append(int(line.strip()))
-        else:
-            s.append(line)
+    try:
+        sig = open(path, 'rt')
+        s = []
+        for line in sig.readlines():
+            if line.strip().isdigit():
+                s.append(int(line.strip()))
+            else:
+                s.append(line)
 
-    return s
+        return s
+
+    except OSError as os:
+        print('An incorrect input type has been entered for signature '
+              'path, please try again. \nDescription: {0}'.format(os))
+
+    except TypeError as te:
+        print('Incorrect data type, please enter the correct signature path. \n'
+              'Description: {0}'.format(te))
 
 def normalisation(norm_method, score_list, score, library_len, sig_len,
                   mad = True):
@@ -34,23 +50,26 @@ def normalisation(norm_method, score_list, score, library_len, sig_len,
     :return: a tuple, containing the normalised score (float) and an array of
     each genes score normalised
     """
-
-    if norm_method == 'standard':
-        norm = score / library_len
+    try:
+        if norm_method == 'standard':
+            norm = score / library_len
+            if mad:
+                u = numpy.array(score_list) / library_len
+        elif norm_method == 'theoretical':
+            low_bound = (library_len + 1) / 2
+            upper_bound = library_len - ((sig_len - 1) / 2)
+            norm = (score - low_bound) / (upper_bound - low_bound)
+            if mad:
+                u = ((numpy.array(score_list)) - low_bound) / (upper_bound - low_bound)
         if mad:
-            u = numpy.array(score_list) / library_len
-    elif norm_method == 'theoretical':
-        low_bound = (library_len + 1) / 2
-        upper_bound = library_len - ((sig_len - 1) / 2)
-        norm = (score - low_bound) / (upper_bound - low_bound)
-        if mad:
-            u = ((numpy.array(score_list)) - low_bound) / (upper_bound - low_bound)
+            return norm, u
+        elif mad == False:
+            return norm
 
+        raise InvalidNormalisation
 
-    if mad:
-        return norm, u
-    else:
-        return norm
+    except:
+        print('Normalisation method must be standard or theoretical.')
 
 def normalisation_rank(norm_method, ranks, library_len, sig_len):
 
@@ -63,17 +82,23 @@ def normalisation_rank(norm_method, ranks, library_len, sig_len):
 
     :return: a dataframe with normalised ranks for each gene in each sample
     """
+    try:
+        if norm_method == 'standard':
+            ranks = ranks/library_len
+        elif norm_method == 'theoretical':
+            low_bound = (library_len+1)/2
+            upper_bound = library_len - ((sig_len-1)/2)
+            ranks = (ranks- low_bound)/(upper_bound-low_bound)
 
-    if norm_method == 'standard':
-        ranks = ranks/library_len
-    elif norm_method == 'theoretical':
-        low_bound = (library_len+1)/2
-        upper_bound = library_len - ((sig_len-1)/2)
-        ranks = (ranks- low_bound)/(upper_bound-low_bound)
-    return ranks
+        raise InvalidNormalisation
 
-def score(up_gene, sample, down_gene = False,norm_method = 'standard',
-          norm_down = 0,full_data= False):
+        return ranks
+    except InvalidNormalisation:
+        print('Normalisation method must be standard or theoretical.')
+
+
+def score(up_gene, sample, down_gene = False, norm_method = 'standard',
+          norm_down = 0, full_data= False):
     """
     This function will generate a score, using singscore method for each
     sample in a cohort. It may be used for either single direction signatures
@@ -564,7 +589,7 @@ def permutate(sample, n_up, n_down = False, reps= 100, norm_method =
         dependent on a the number of genes in a signature. Take a sample and
         score it with randomly selected genes from a gene list. Returns a
         dataframe the length of the permutations (reps) desired with each
-        column corresponding to a sample.
+        column corresponding to a sample. It should be noted
 
         :param sample:  sample is a dataframe containing the expression data
                         from at least one sample (more may be used).
@@ -732,3 +757,5 @@ def nulldistribution(permutations, score,  nrows = 1, ncols = 1,
         matplotlib.pyplot.show()
 
     return fig
+
+
