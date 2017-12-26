@@ -343,9 +343,10 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
                  False, show= True):
 
     """
-    Takes the dataframe output of rank and will saves figure to output path
-    (if supplied) and optionally shows figure. Must supply nrows and ncols
-    that are sutiable for the number of plots to generated
+    Takes the dataframe output of rank and produces barcode plots. options to
+    save figure to output path (if supplied) and show figure.
+    Must supply nrows and ncols that are sutiable for the number of plots to
+    generated.
 
     :param ranks: a dataframe output of rank, if up and down regulated
                 genes, must have a column called 'up_or_down' annotating the
@@ -589,7 +590,7 @@ def permutate(sample, n_up, n_down = False, reps= 100, norm_method =
         dependent on a the number of genes in a signature. Take a sample and
         score it with randomly selected genes from a gene list. Returns a
         dataframe the length of the permutations (reps) desired with each
-        column corresponding to a sample. It should be noted
+        column corresponding to a sample.
 
         :param sample:  sample is a dataframe containing the expression data
                         from at least one sample (more may be used).

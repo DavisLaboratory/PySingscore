@@ -6,7 +6,7 @@ def readme():
 
 setup(name='singscore',
       version='0.1',
-      description='The funniest joke in the world',
+      description='implement singscore (doi:10.1101/231217) in Python',
       url='http://github.com/kristyhoran/singscore',
       author='Kristy Horan',
       author_email='kristyhoran15@gmail.com',
