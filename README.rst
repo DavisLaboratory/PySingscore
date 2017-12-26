@@ -45,9 +45,9 @@ plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =False,tests
 permutate(sample, n_up, n_down = False, reps= 100, norm_method ='standard', rs_down = 0)
 
     Bootstrap a random population of scores for a given sample, that is
-        dependent on a the number of genes in a signature. Take a sample and
-        score it with randomly selected genes from a gene list. Returns a
-        dataframe the length of the permutations (reps) desired.
+    dependent on a the number of genes in a signature. Take a sample and
+    score it with randomly selected genes from a gene list. Returns a
+    dataframe the length of the permutations (reps) desired.
 
 empiricalpval(permutations, score)
 
