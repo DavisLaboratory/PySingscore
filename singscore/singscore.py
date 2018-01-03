@@ -3,6 +3,7 @@ import matplotlib.pyplot
 import numpy
 import pandas
 import seaborn
+import statsmodels.robust.scale
 from matplotlib import gridspec, patches
 
 from exception import InvalidNormalisation
@@ -56,15 +57,12 @@ def normalisation(norm_method, score_list, score, library_len, sig_len,
             if mad:
                 u = numpy.array(score_list) / library_len
         elif norm_method == 'theoretical':
-            low_bound = (library_len + 1) / 2
-            upper_bound = library_len - ((sig_len - 1) / 2)
+            low_bound = (sig_len + 1) / 2
+            upper_bound = ((2*library_len) - sig_len + 1)/2
             norm = (score - low_bound) / (upper_bound - low_bound)
             if mad:
-                u = ((numpy.array(score_list)) - low_bound) / (upper_bound - low_bound)
-        if mad:
-            return norm, u
-        elif mad == False:
-            return norm
+                u = numpy.array(score_list)
+        return norm
 
         raise InvalidNormalisation
 
@@ -86,11 +84,11 @@ def normalisation_rank(norm_method, ranks, library_len, sig_len):
         if norm_method == 'standard':
             ranks = ranks/library_len
         elif norm_method == 'theoretical':
-            low_bound = (library_len+1)/2
-            upper_bound = library_len - ((sig_len-1)/2)
+            low_bound = (sig_len + 1) / 2
+            upper_bound = ((2 * library_len) - sig_len + 1) / 2
             ranks = (ranks- low_bound)/(upper_bound-low_bound)
 
-        raise InvalidNormalisation
+
 
         return ranks
     except InvalidNormalisation:
@@ -98,7 +96,7 @@ def normalisation_rank(norm_method, ranks, library_len, sig_len):
 
 
 def score(up_gene, sample, down_gene = False, norm_method = 'standard',
-          norm_down = 0, full_data= False):
+          norm_down = 0, full_data= False, centering = True):
     """
     This function will generate a score, using singscore method for each
     sample in a cohort. It may be used for either single direction signatures
@@ -135,7 +133,8 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
         up_gene = getsignature(up_gene)
         if down_gene != False:
             down_gene = getsignature(down_gene)
-
+    sig_len_up = len(up_gene)
+    sig_len_down = len(down_gene)
     for i in sample.columns:
         # rank the genes -> Ties will be taken as the rank of the first
         # appearance
@@ -147,19 +146,24 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
         # index/rowname (the gene) and the sample that is equal to i
         for j in up_gene:
             if j in up_sort.index:
-                su.append(up_sort.get_value(j, i))
+                su.append(int(up_sort.get_value(j, i)))
+            else:
+                sig_len_up = sig_len_up -1
+
         # normalise the score for the number of genes in the signature
         score_up = numpy.mean(su)
 
         # normalisation
         norm_up = normalisation(norm_method= norm_method, library_len=len(
-            sample.index), score_list=su, score = score_up, sig_len=len(up_gene))
-        u = norm_up[1]
-        norm_up = norm_up[0]
-
+            sample.index), score_list=su, score = score_up, sig_len=sig_len_up)
+        # if only a single direction signature is provided then the
+        # centering will be done to up score, since this is equal to total
+        # score
+        if down_gene == False:
+            norm_up = norm_up - 0.5
         # find dispersion
-        median_up = numpy.median(u)
-        mad_up = numpy.median(abs(u-median_up))
+        mad_up = statsmodels.robust.scale.mad(su)
+
 
 
         # ==== repeat with down genes,flipping the data frame around
@@ -175,18 +179,19 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
             for k in down_gene:
                 if k in sample.index:
                     sd.append(down_sort.get_value(k,i))
+                else:
+                    sig_len_down = sig_len_down - 1
+
 
             score_down = numpy.mean(sd)
 
             # normalisation
             norm_down = normalisation(norm_method=norm_method, library_len=len(
-                sample.index), score_list=sd, score=score_down, sig_len=len(
-                down_gene))
-            d = norm_down[1]
-            norm_down= norm_down[0]
+                sample.index), score_list=sd, score=score_down, sig_len=sig_len_down)
+            if centering:
+                norm_down = norm_down - 0.5
             # find dispersion
-            median_down = numpy.median(d)
-            mad_down = numpy.median(abs(d-median_down))
+            mad_down = statsmodels.robust.scale.mad(sd)
 
         total_score = norm_up + norm_down
         # make the score dataframe
@@ -257,6 +262,10 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
         up_gene = getsignature(up_gene)
         if down_gene != False:
             down_gene = getsignature(down_gene)
+    library_len = len(sample.index)
+    len_up_sig = len(up_gene)
+    len_down_sig = len(down_gene)
+
     su = {}
     sd = {}
     for i in sample.columns:
@@ -271,7 +280,8 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
         for j in up_gene:
             if j in up_sort.index:
                 su[i].append((j, up_sort.get_value(j,i)))
-
+            else:
+                len_up_sig = len_up_sig - 1
 
         # ==== repeat with down genes
         if down_gene != False:
@@ -287,6 +297,8 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
             for k in down_gene:
                 if k in sample.index:
                     sd[i].append((k, down_sort.get_value(k,i)))
+                else:
+                    len_down_sig = len_down_sig - 1
 
     # dataframes of ranks for each gene in each sample and then normalise
     # ranks (0 to 1, based on library size) standard = simply divide by the
@@ -294,8 +306,8 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
     up_ranks = pandas.DataFrame({s: pandas.Series({g: r for g,r in su[s]}) for
                                 s in su})
     up_ranks = normalisation_rank(norm_method= norm_method, ranks=up_ranks,
-                                  library_len=len(sample.index),
-                                  sig_len=len(up_gene))
+                                  library_len=library_len,
+                                  sig_len=len_up_sig)
 
     if down_gene != False:
         down_ranks = pandas.DataFrame({s: pandas.Series({g: r for g,r in sd[s]})
@@ -303,8 +315,8 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
 
         down_ranks = normalisation_rank(norm_method=norm_method,
                                         ranks=down_ranks,
-                                      library_len=len(sample.index),
-                                      sig_len=len(down_gene))
+                                      library_len=library_len,
+                                      sig_len=len_down_sig)
 
         down_ranks['up_or_down'] = 'down'
         up_ranks['up_or_down'] = 'up'
@@ -374,7 +386,7 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
     grid_outer = grid[0]
     ax_list = grid[1]
 
-    fig = matplotlib.pyplot.figure(figsize=(20, 10))
+    fig = matplotlib.pyplot.figure(figsize=(10, 5))
 
     # if the signature contains up and down regulated genes,
     # then 'up_or_down' column should be included as annotation. This is
@@ -397,9 +409,9 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
         sample = ranks.columns[r]
         # set title
         if t == False:
-            title = sample
+            title = 'Rank density'
         else:
-            title = t
+            title = 'Rank density ' + '(' + t + ')'
         # if single direction, then the plot will have two panels
         if singledir:
             inner = gridspec.GridSpecFromSubplotSpec(nrows=2, ncols=1,
@@ -431,6 +443,7 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
                              kde=True, label='down-regulated genes')
         else:
             ax1.xaxis.label.set_visible(False)
+        ax1.xaxis.label.set_visible(False)
         matplotlib.pyplot.xlim(0, 1)
         ax1.set_xticklabels([])
         ax1.set_xlim(-.1, 1.1)
@@ -449,7 +462,7 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
         ax2.tick_params(axis='both', which='both', length=0)
         ax2.xaxis.label.set_visible(False)
         matplotlib.pyplot.xlim(0, 1)
-        ax1.set_title(title)
+        ax1.set_title(title, fontsize = 16)
         if singledir:
             # if single direction then label ranks on bottom axis
             ax2.set_xlabel('Ranks', fontsize=12)
@@ -459,9 +472,10 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
                              color=colour_2,
                              ax=ax3,
                              kde=False, rug_kws={'height': 0.5})
-            ax3.set_xticklabels([])
+            # ax3.set_xticklabels([])
             ax3.set_yticklabels([])
-            ax3.set_xlabel('Ranks', fontsize=12)
+            ax3.tick_params(axis='both', which='both', length=0)
+            ax3.set_xlabel('Normalised Ranks', fontsize=16)
 
         seaborn.despine()
         # update counter to move to the next panel
@@ -532,7 +546,7 @@ def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
         # if up, down and total are required, define inner grid as a 1 x 3
         # and fig size to 10h x 30w and place up, down and total axes
         if 'down_score' in score.columns:
-            fig = matplotlib.pyplot.figure(figsize=(30, 10))
+            fig = matplotlib.pyplot.figure(figsize=(15, 5))
             inner = gridspec.GridSpecFromSubplotSpec(nrows=1, ncols=3,
                                                  subplot_spec=
                                                  grid_outer[ax_list[counter]])
@@ -548,10 +562,12 @@ def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
             for x,y,lab,col in zip(score['down_score'], score['mad_down'],
                                    score['cond'], score['color']):
                 down_inner.scatter(x,y,label = lab, color=col)
-            up_inner.set_xlabel('Up score')
-            up_inner.set_ylabel('MAD (Up score)')
-            down_inner.set_xlabel('Down score')
-            down_inner.set_ylabel('MAD (Down score)')
+            up_inner.set_xlabel('Score')
+            up_inner.set_ylabel('MAD')
+            up_inner.set_title('Up score', fontsize = 16)
+            down_inner.set_xlabel('Score')
+            down_inner.set_title('Down score', fontsize = 16)
+            down_inner.set_ylabel('MAD')
 
         # if only total is required, fig size is 10 x 10 and 1 x 1 grid
         else:
@@ -565,8 +581,9 @@ def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
         for x,y,lab,col in zip(score['total_score'], score['total_mad'],
                                score['cond'], score['color']):
             total_inner.scatter(x,y,label = lab, color=col)
-        total_inner.set_xlabel('Total score')
-        total_inner.set_ylabel('MAD (Total score)')
+        total_inner.set_xlabel('Score')
+        total_inner.set_ylabel('MAD')
+        total_inner.set_title('Total Score', fontsize = 16)
         # if differential colors plot legend
         if ctrlstring:
             total_inner.legend(handles=[ctrl, test])
@@ -582,8 +599,8 @@ def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
               'full_data = True')
 
 
-def permutate(sample, n_up, n_down = False, reps= 100, norm_method =
-            'standard', rs_down = 0):
+def permutate(sample, n_up, n_down = False, reps= 10000, norm_method =
+            'standard', rs_down = 0, centering = True):
 
         """
         Bootstrap a random population of scores for a given sample, that is
@@ -634,7 +651,9 @@ def permutate(sample, n_up, n_down = False, reps= 100, norm_method =
                                       score_list=ru, score = rs_up,
                                       mad=False, library_len=len(
                         sample.index), sig_len= n_up)
-
+                if n_down == False:
+                    if centering:
+                        rs_up = rs_up - 0.5
                 if n_down:
                     # select n_down genes
                     down_gene = numpy.random.choice(sample.index, n_down,
@@ -651,6 +670,8 @@ def permutate(sample, n_up, n_down = False, reps= 100, norm_method =
                                             rs_down, score_list=rd, mad=False,
                                             library_len=len(sample.index),
                                             sig_len=n_down)
+                    if centering:
+                        rs_down = rs_down - 0.5
                 #   calculate the random score and append to scores list
                 rs = rs_down + rs_up
                 scores.append(rs)
@@ -682,6 +703,7 @@ def empiricalpval(permutations, score):
         if sample in score.index:
             # extract the score
             s = score.get_value(sample, 'total_score')
+            print(s)
             # calculate r = number of permutated scores greater than the
             # actual score
             r = len(permutations[permutations[sample]>s]) + 1
@@ -690,6 +712,7 @@ def empiricalpval(permutations, score):
             p = r/m
             # add an entry to the p dictionary sample:pvalue
             emp_p[sample] = p
+            # print(emp_p)
     # create a data frame of p values
     emp = pandas.DataFrame.from_dict(data=emp_p, orient='index')
     emp = emp.rename(columns={0:'empirical p value'})
