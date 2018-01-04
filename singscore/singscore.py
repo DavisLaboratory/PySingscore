@@ -751,7 +751,7 @@ def nulldistribution(permutations, score,  nrows = 1, ncols = 1,
     grid_outer = grid[0]
     ax_list = grid[1]
     # set figure size
-    fig = matplotlib.pyplot.figure(figsize=(10 * ncols, 10 * nrows))
+    fig = matplotlib.pyplot.figure(figsize=(5 * ncols, 5 * nrows))
 
     for p in permutations:
 
