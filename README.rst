@@ -69,3 +69,65 @@ nulldistribution(permutations, score,  nrows = 1, ncols = 1,counter = 0, outpath
     Generate histogram/density plot of permutated data, with actual score
     indicated by a vertical line (blue) and a significance threshold
     indicated by red vertical line
+
+Tutorial
+________
+
+
+set up data::
+
+    data = pandas.read_csv(open('test_data/entrez_sample.txt', 'r'), header =
+    'infer', sep='\t')
+    # gene identifiers must be rownames
+    data = data.set_index(keys='EntrezID')
+    # prepare signatures
+    sigs = pandas.read_csv(open('test_sigs/tgfb_upDown.txt', 'r'), header =
+    'infer', sep = '\t')
+    # subset the data for up and down
+    up = sigs[sigs['upDown'] == 'up']
+    down = sigs[sigs['upDown'] == 'down']
+    # get a list of ids
+    up = list(up['EntrezID'])
+    down = list(down['EntrezID'])
+
+run score()::
+
+    scored_data = score(up_gene=up, down_gene=down,sample=data,
+                    norm_method='theoretical', full_data=True)
+
+plotdisperion()::
+
+    plotdispersion(scored_data, ctrlstring='Ctrl', teststring='TGFb',
+               testlabel='TGFb',colour_1='g', colour_2='b',
+               outpath='output/dispersion.pdf',show=False)
+
+.. image:: singscore/test/output/dispersion.pdf
+    :align: center
+
+
+generate barcode plots of rank distribution::
+
+    ranked_data = rank(up_gene=up, down_gene=down, sample=data[['D_Ctrl_R1']],
+                   norm_method='theoretical')
+
+    plotrankdist(ranks=ranked_data, colour_1='r', colour_2='b',
+             output='output/barcode.pdf', show=False)
+
+
+.. image:: singscore/test/output/barcode.pdf
+    :align: center
+
+
+check the significance of enrichment in each sample::
+
+    permd = permutate(data, n_up=193, n_down=108)
+    pvals = empiricalpval(permutations=permd, score=scored_data)
+
+    nulldistribution(permutations=permd, score=scored_data, nrows=2, ncols=5,
+                 threshold=0.05, outpath='output/nulldist.pdf', show=False)
+
+
+.. image:: singscore/test/output/nulldist.pdf
+    :align: center
+    :width: 100%
+
