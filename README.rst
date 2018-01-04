@@ -114,7 +114,7 @@ generate barcode plots of rank distribution::
              output='output/barcode.pdf', show=False)
 
 
-.. image:: singscore/test/output/barcode.pdf
+.. image:: https://github.com/kristyhoran/singscore/blob/master/singscore/test/output/barcode.pdf
     :align: center
 
 
