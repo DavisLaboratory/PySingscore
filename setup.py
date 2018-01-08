@@ -12,9 +12,11 @@ setup(name='singscore',
       author_email='kristyhoran15@gmail.com',
       license='MIT',
       packages=['singscore'],
-      install_requires=[
+      requires=[
           'pandas', 'sys', 'os', 'numpy','matplotlib', 'matplotlib.pyplot',
           'itertools','seaborn', 'scipy', 'scipy.stats',
           'matplotlib.gridspec','matplotlib.lines','matplotlib.patches',
       ],
+      test_suite='nose.collector',
+      tests_require=['nose'],
       zip_safe=False)

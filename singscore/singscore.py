@@ -4,9 +4,10 @@ import numpy
 import pandas
 import seaborn
 import statsmodels.robust.scale
+
 from matplotlib import gridspec, patches
 
-from exception import InvalidNormalisation
+from exception import InvalidNormalisation, InvalidIDType, InvalidGrid
 
 
 def getsignature(path):
@@ -36,6 +37,55 @@ def getsignature(path):
     except TypeError as te:
         print('Incorrect data type, please enter the correct signature path. \n'
               'Description: {0}'.format(te))
+
+def checkids(up_gene, sample_index, down_gene = False):
+
+
+    if any(isinstance(x, (str)) for x in up_gene) != any(isinstance(x, (str))
+                                                         for x in
+                                                         list(sample_index)):
+        print('up signature and sample are not the same')
+        raise InvalidIDType
+
+    if any(isinstance(x, (int)) for x in up_gene) != any(isinstance(x, (int))
+                                                         for x in
+                                                         list(sample_index)):
+        print('up signature and sample  are not the same')
+        raise InvalidIDType
+
+    if down_gene != False:
+        if any(isinstance(x, (str)) for x in down_gene) != any(isinstance(x,
+                                                                          (
+                                                                          str))
+                                                               for x in
+                                                               list(
+                                                                   sample_index)):
+            print('down signature and sample are not the same')
+            raise InvalidIDType
+
+        if any(isinstance(x, (int)) for x in down_gene) != any(isinstance(x,
+                                                                          (
+                                                                          int))
+                                                               for x in
+                                                               list(
+                                                                   sample_index)):
+            print('down signature and sample are not the same')
+            raise InvalidIDType
+
+        if any(isinstance(x, (int)) for x in up_gene) != any(isinstance(x,
+                                                                        (int))
+                                                             for x in
+                                                             down_gene):
+            print('up and down signatures are not the same')
+            raise InvalidIDType
+
+        if any(isinstance(x, (str)) for x in up_gene) != any(isinstance(x,
+                                                                        (str))
+                                                             for x in
+                                                             down_gene):
+            print('up and down signatures not the same')
+            raise InvalidIDType
+
 
 def normalisation(norm_method, score_list, score, library_len, sig_len,
                   mad = True):
@@ -88,9 +138,8 @@ def normalisation_rank(norm_method, ranks, library_len, sig_len):
             upper_bound = ((2 * library_len) - sig_len + 1) / 2
             ranks = (ranks- low_bound)/(upper_bound-low_bound)
 
-
-
         return ranks
+
     except InvalidNormalisation:
         print('Normalisation method must be standard or theoretical.')
 
@@ -124,105 +173,119 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
     :return: a dataframe of scores with or without dispersion
     """
 
-    data = pandas.DataFrame()
 
-    # if up_gene and/or down_gene are a path to txt file then gene_path =
-    # True and use getsignature function to open and generate a list of
-    # genes
-    if type(up_gene) is str:
-        up_gene = getsignature(up_gene)
-        if down_gene != False:
-            down_gene = getsignature(down_gene)
-    sig_len_up = len(up_gene)
-    sig_len_down = len(down_gene)
-    for i in sample.columns:
-        # rank the genes -> Ties will be taken as the rank of the first
-        # appearance
-        up_sort = sample[i].rank(method='min', ascending=True)
-        # su is a list to contain the score for each gene in the gene list
-        su = []
+    try:
+        data = pandas.DataFrame()
 
-        # for every gene in the list gene get the value at that
-        # index/rowname (the gene) and the sample that is equal to i
-        for j in up_gene:
-            if j in up_sort.index:
-                su.append(int(up_sort.get_value(j, i)))
-            else:
-                sig_len_up = sig_len_up -1
-
-        # normalise the score for the number of genes in the signature
-        score_up = numpy.mean(su)
-
-        # normalisation
-        norm_up = normalisation(norm_method= norm_method, library_len=len(
-            sample.index), score_list=su, score = score_up, sig_len=sig_len_up)
-        # if only a single direction signature is provided then the
-        # centering will be done to up score, since this is equal to total
-        # score
-        if down_gene == False:
-            norm_up = norm_up - 0.5
-        # find dispersion
-        mad_up = statsmodels.robust.scale.mad(su)
+        # if up_gene and/or down_gene are a path to txt file then gene_path =
+        # True and use getsignature function to open and generate a list of
+        # genes
+        if type(up_gene) is str:
+            up_gene = getsignature(up_gene)
+            if down_gene != False:
+                down_gene = getsignature(down_gene)
 
 
+        # check if the data type of signatures and samples are the same, either
+        # int for EntrezID or str for Symbol
+        checkids(up_gene=up_gene, down_gene=down_gene, sample_index=list(
+            sample.index))
 
-        # ==== repeat with down genes,flipping the data frame around
-        if down_gene != False:
-            # this is the standard for scoring, opposite to up
-            down_sort = sample[i].rank(method='min', ascending=False)
+        # for calculating normalisation
+        sig_len_up = len(up_gene)
+        sig_len_down = len(down_gene)
 
-            # sd is a list to contain the score for each gene in the
-            # gene list
-            sd = []
+        for i in sample.columns:
+            # rank the genes -> Ties will be taken as the rank of the first
+            # appearance
+            up_sort = sample[i].rank(method='min', ascending=True)
+            # su is a list to contain the score for each gene in the gene list
+            su = []
+
             # for every gene in the list gene get the value at that
             # index/rowname (the gene) and the sample that is equal to i
-            for k in down_gene:
-                if k in sample.index:
-                    sd.append(down_sort.get_value(k,i))
+            for j in up_gene:
+                if j in up_sort.index:
+                    su.append(up_sort.get_value(j, i))
                 else:
-                    sig_len_down = sig_len_down - 1
+                    sig_len_up = sig_len_up -1
 
-
-            score_down = numpy.mean(sd)
+            # normalise the score for the number of genes in the signature
+            score_up = numpy.mean(su)
 
             # normalisation
-            norm_down = normalisation(norm_method=norm_method, library_len=len(
-                sample.index), score_list=sd, score=score_down, sig_len=sig_len_down)
-            if centering:
-                norm_down = norm_down - 0.5
-            # find dispersion
-            mad_down = statsmodels.robust.scale.mad(sd)
-
-        total_score = norm_up + norm_down
-        # make the score dataframe
-        if full_data == True and down_gene != False: # if all data is
-            # wanted and there is a down gene list
-            temp_df = pandas.DataFrame({'up_score': norm_up,
-                                    'mad_up':mad_up,'down_score':norm_down,
-                                    'mad_down':mad_down,
-                                    'total_score': total_score,
-                                    'total_mad':mad_down + mad_up},
-                                   index=[i])
-            temp_df = temp_df[['up_score', 'mad_up', 'down_score',
-                               'mad_down', 'total_score', 'total_mad']]
-        elif full_data == True and down_gene == False: # if all data is
-            # wanted and there is only up gene list
-            temp_df = pandas.DataFrame({'total_score': total_score,
-                                        'total_mad': mad_up,
-                                        },index=[i])
-        else: # default, regardless of down gene list, just make total
+            norm_up = normalisation(norm_method= norm_method, library_len=len(
+                sample.index), score_list=su, score = score_up, sig_len=sig_len_up)
+            # if only a single direction signature is provided then the
+            # centering will be done to up score, since this is equal to total
             # score
-            temp_df = pandas.DataFrame({'total_score':total_score},
+            if down_gene == False:
+                norm_up = norm_up - 0.5
+            # find dispersion
+            mad_up = statsmodels.robust.scale.mad(su)
+
+
+
+            # ==== repeat with down genes,flipping the data frame around
+            if down_gene != False:
+                # this is the standard for scoring, opposite to up
+                down_sort = sample[i].rank(method='min', ascending=False)
+
+                # sd is a list to contain the score for each gene in the
+                # gene list
+                sd = []
+                # for every gene in the list gene get the value at that
+                # index/rowname (the gene) and the sample that is equal to i
+                for k in down_gene:
+                    if k in sample.index:
+                        sd.append(down_sort.get_value(k,i))
+                    else:
+                        sig_len_down = sig_len_down - 1
+
+
+                score_down = numpy.mean(sd)
+
+                # normalisation
+                norm_down = normalisation(norm_method=norm_method, library_len=len(
+                    sample.index), score_list=sd, score=score_down, sig_len=sig_len_down)
+                if centering:
+                    norm_down = norm_down - 0.5
+                # find dispersion
+                mad_down = statsmodels.robust.scale.mad(sd)
+
+            total_score = norm_up + norm_down
+            # make the score dataframe
+            if full_data == True and down_gene != False: # if all data is
+                # wanted and there is a down gene list
+                temp_df = pandas.DataFrame({'up_score': norm_up,
+                                        'mad_up':mad_up,'down_score':norm_down,
+                                        'mad_down':mad_down,
+                                        'total_score': total_score,
+                                        'total_mad':mad_down + mad_up},
                                        index=[i])
+                temp_df = temp_df[['up_score', 'mad_up', 'down_score',
+                                   'mad_down', 'total_score', 'total_mad']]
+            elif full_data == True and down_gene == False: # if all data is
+                # wanted and there is only up gene list
+                temp_df = pandas.DataFrame({'total_score': total_score,
+                                            'total_mad': mad_up,
+                                            },index=[i])
+            else: # default, regardless of down gene list, just make total
+                # score
+                temp_df = pandas.DataFrame({'total_score':total_score},
+                                           index=[i])
 
-        if len(data.columns) == 0:
-            data = temp_df
+            if len(data.columns) == 0:
+                data = temp_df
 
-        else:
-            data = data.append(temp_df)
+            else:
+                data = data.append(temp_df)
+        return data
+
+    except InvalidIDType:
+        print('The gene identifiers are not of the same type.')
 
 
-    return data
 
 def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
 
@@ -257,76 +320,84 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
     # if up_gene and/or down_gene are a path to txt file then gene_path =
     # True and use getsignature function to open and generate a list of
     # genes
+    try:
+        if type(up_gene) is str:
+            up_gene = getsignature(up_gene)
+            if down_gene != False:
+                down_gene = getsignature(down_gene)
 
-    if type(up_gene) is str:
-        up_gene = getsignature(up_gene)
-        if down_gene != False:
-            down_gene = getsignature(down_gene)
-    library_len = len(sample.index)
-    len_up_sig = len(up_gene)
-    len_down_sig = len(down_gene)
+        checkids(up_gene=up_gene, down_gene=down_gene,
+                 sample_index=sample.index)
 
-    su = {}
-    sd = {}
-    for i in sample.columns:
-        # rank the genes -> Ties will be taken as the rank of the first
-        # appearance
-        up_sort = sample[i].rank(method='min', ascending=True)
-        # su is a dictionary to contain the gene id, rank
+        library_len = len(sample.index)
+        len_up_sig = len(up_gene)
+        len_down_sig = len(down_gene)
 
-        su[i] = []
-        # for every gene in the list gene get the value at that
-        # index/rowname (the gene) and the sample that is equal to i
-        for j in up_gene:
-            if j in up_sort.index:
-                su[i].append((j, up_sort.get_value(j,i)))
-            else:
-                len_up_sig = len_up_sig - 1
+        su = {}
+        sd = {}
+        for i in sample.columns:
+            # rank the genes -> Ties will be taken as the rank of the first
+            # appearance
+            up_sort = sample[i].rank(method='min', ascending=True)
+            # su is a dictionary to contain the gene id, rank
 
-        # ==== repeat with down genes
-        if down_gene != False:
-            # for ranking use the same direction as up
-            down_sort = sample[i].rank(method='min', ascending=True)
-
-            # sd is a dictionary to contain the score for each gene in the
-            # gene list
-
-            sd[i] = []
+            su[i] = []
             # for every gene in the list gene get the value at that
             # index/rowname (the gene) and the sample that is equal to i
-            for k in down_gene:
-                if k in sample.index:
-                    sd[i].append((k, down_sort.get_value(k,i)))
+            for j in up_gene:
+                if j in up_sort.index:
+                    su[i].append((j, up_sort.get_value(j,i)))
                 else:
-                    len_down_sig = len_down_sig - 1
+                    len_up_sig = len_up_sig - 1
 
-    # dataframes of ranks for each gene in each sample and then normalise
-    # ranks (0 to 1, based on library size) standard = simply divide by the
-    # library size theoretical = use the theoretical minimum and maximum for
-    up_ranks = pandas.DataFrame({s: pandas.Series({g: r for g,r in su[s]}) for
-                                s in su})
-    up_ranks = normalisation_rank(norm_method= norm_method, ranks=up_ranks,
-                                  library_len=library_len,
-                                  sig_len=len_up_sig)
+            # ==== repeat with down genes
+            if down_gene != False:
+                # for ranking use the same direction as up
+                down_sort = sample[i].rank(method='min', ascending=True)
 
-    if down_gene != False:
-        down_ranks = pandas.DataFrame({s: pandas.Series({g: r for g,r in sd[s]})
-                                       for s in sd})
+                # sd is a dictionary to contain the score for each gene in the
+                # gene list
 
-        down_ranks = normalisation_rank(norm_method=norm_method,
-                                        ranks=down_ranks,
+                sd[i] = []
+                # for every gene in the list gene get the value at that
+                # index/rowname (the gene) and the sample that is equal to i
+                for k in down_gene:
+                    if k in sample.index:
+                        sd[i].append((k, down_sort.get_value(k,i)))
+                    else:
+                        len_down_sig = len_down_sig - 1
+
+        # dataframes of ranks for each gene in each sample and then normalise
+        # ranks (0 to 1, based on library size) standard = simply divide by the
+        # library size theoretical = use the theoretical minimum and maximum for
+        up_ranks = pandas.DataFrame({s: pandas.Series({g: r for g,r in su[s]}) for
+                                    s in su})
+        up_ranks = normalisation_rank(norm_method= norm_method, ranks=up_ranks,
                                       library_len=library_len,
-                                      sig_len=len_down_sig)
+                                      sig_len=len_up_sig)
 
-        down_ranks['up_or_down'] = 'down'
-        up_ranks['up_or_down'] = 'up'
+        if down_gene != False:
+            down_ranks = pandas.DataFrame({s: pandas.Series({g: r for g,r in sd[s]})
+                                           for s in sd})
 
-    if down_gene != False:
-        ranks = up_ranks.append(down_ranks)
-    else:
-        ranks = up_ranks
+            down_ranks = normalisation_rank(norm_method=norm_method,
+                                            ranks=down_ranks,
+                                          library_len=library_len,
+                                          sig_len=len_down_sig)
 
-    return (ranks)
+            down_ranks['up_or_down'] = 'down'
+            up_ranks['up_or_down'] = 'up'
+
+        if down_gene != False:
+            ranks = up_ranks.append(down_ranks)
+        else:
+            ranks = up_ranks
+
+        return (ranks)
+
+    except InvalidIDType:
+        print('The gene identifiers are not of the same type.')
+
 
 
 def definegrid(nrows , ncols ):
@@ -378,114 +449,124 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
 
     :return: matplotlib.figure.Figure
     """
-    # set the style of the graphs to have no background or spines
-    seaborn.set_style('ticks')
+    try:
 
-    # define the grid set up for the plots
-    grid = definegrid(nrows=nrows, ncols = ncols)
-    grid_outer = grid[0]
-    ax_list = grid[1]
+        # set the style of the graphs to have no background or spines
+        seaborn.set_style('ticks')
 
-    fig = matplotlib.pyplot.figure(figsize=(10, 5))
+        # define the grid set up for the plots
+        grid = definegrid(nrows=nrows, ncols = ncols)
+        grid_outer = grid[0]
+        ax_list = grid[1]
 
-    # if the signature contains up and down regulated genes,
-    # then 'up_or_down' column should be included as annotation. This is
-    # standard output of rank for bi-directional signatures.
-    if 'up_or_down' in ranks.columns:
-        # select up and down genes and put in separate dataframes
-        ranks_down = ranks[ranks['up_or_down'] == 'down']
-        ranks = ranks[ranks['up_or_down'] == 'up']
-        # remove the 'up_or_down' column
-        ranks = ranks.drop(labels = ['up_or_down'], axis = 1)
-        ranks_down = ranks_down.drop(labels = ['up_or_down'], axis = 1)
-        # set singledir to False, for the addition of the down-regulated set
-        #  the plots
-        singledir = False
+        fig = matplotlib.pyplot.figure(figsize=(10, 5))
 
-    # plot each column supplied separately
-    for r in range(len(ranks.columns)):
-        # get the column name, for matching with down if required and
-        # setting as title if necessary
-        sample = ranks.columns[r]
-        # set title
-        if t == False:
-            title = 'Rank density'
-        else:
-            title = 'Rank density ' + '(' + t + ')'
-        # if single direction, then the plot will have two panels
-        if singledir:
-            inner = gridspec.GridSpecFromSubplotSpec(nrows=2, ncols=1,
-                                                 subplot_spec=
-                                                 grid_outer[ax_list[counter]])
-        # if up and down direction, then the plot will have three panels
-        else:
-            inner = gridspec.GridSpecFromSubplotSpec(nrows=3, ncols=1,
+        # if the signature contains up and down regulated genes,
+        # then 'up_or_down' column should be included as annotation. This is
+        # standard output of rank for bi-directional signatures.
+        if 'up_or_down' in ranks.columns:
+            # select up and down genes and put in separate dataframes
+            ranks_down = ranks[ranks['up_or_down'] == 'down']
+            ranks = ranks[ranks['up_or_down'] == 'up']
+            # remove the 'up_or_down' column
+            ranks = ranks.drop(labels = ['up_or_down'], axis = 1)
+            ranks_down = ranks_down.drop(labels = ['up_or_down'], axis = 1)
+            # set singledir to False, for the addition of the down-regulated set
+            #  the plots
+            singledir = False
+        # check if grid dimensions are appropriate
+        if (nrows * ncols) < len(ranks.columns):
+            raise InvalidGrid
+
+        # plot each column supplied separately
+        for r in range(len(ranks.columns)):
+            # get the column name, for matching with down if required and
+            # setting as title if necessary
+            sample = ranks.columns[r]
+            # set title
+            if t == False:
+                title = 'Rank density'
+            else:
+                title = 'Rank density ' + '(' + t + ')'
+            # if single direction, then the plot will have two panels
+            if singledir:
+                inner = gridspec.GridSpecFromSubplotSpec(nrows=2, ncols=1,
                                                      subplot_spec=
-                                                     grid_outer[
-                                                         ax_list[counter]])
-            # add the bottom axis for down-regulated barcode plot
-            ax3 = fig.add_subplot(inner[2,0])
+                                                     grid_outer[ax_list[counter]])
+            # if up and down direction, then the plot will have three panels
+            else:
+                inner = gridspec.GridSpecFromSubplotSpec(nrows=3, ncols=1,
+                                                         subplot_spec=
+                                                         grid_outer[
+                                                             ax_list[counter]])
+                # add the bottom axis for down-regulated barcode plot
+                ax3 = fig.add_subplot(inner[2,0])
 
-        # density plot
-        ax1 = fig.add_subplot(inner[0, 0])
-        # up-regulated barcode plot
-        ax2 = fig.add_subplot(inner[1, 0])
+            # density plot
+            ax1 = fig.add_subplot(inner[0, 0])
+            # up-regulated barcode plot
+            ax2 = fig.add_subplot(inner[1, 0])
 
-        # plot the density
-        seaborn.distplot(ranks[sample], hist=False, rug=False,
-                         color=colour_1,
-                         ax=ax1,
-                         kde=True, label='up-regulated genes')
-        if singledir == False:
-            seaborn.distplot(ranks_down[sample], hist=False, rug=False,
-                             color=colour_2,
+            # plot the density
+            seaborn.distplot(ranks[sample], hist=False, rug=False,
+                             color=colour_1,
                              ax=ax1,
-                             kde=True, label='down-regulated genes')
-        else:
+                             kde=True, label='up-regulated genes')
+            if singledir == False:
+                seaborn.distplot(ranks_down[sample], hist=False, rug=False,
+                                 color=colour_2,
+                                 ax=ax1,
+                                 kde=True, label='down-regulated genes')
+            else:
+                ax1.xaxis.label.set_visible(False)
             ax1.xaxis.label.set_visible(False)
-        ax1.xaxis.label.set_visible(False)
-        matplotlib.pyplot.xlim(0, 1)
-        ax1.set_xticklabels([])
-        ax1.set_xlim(-.1, 1.1)
-        ax1.tick_params(axis='both', which='both', length=0)
-        matplotlib.pyplot.xlim(-.1, 1.1)
+            matplotlib.pyplot.xlim(0, 1)
+            ax1.set_xticklabels([])
+            ax1.set_xlim(-.1, 1.1)
+            ax1.tick_params(axis='both', which='both', length=0)
+            matplotlib.pyplot.xlim(-.1, 1.1)
 
-        # plot the barcodes
-        seaborn.distplot(ranks[sample], hist=False, rug=True,
-                         color=colour_1,
-                         ax=ax2,
-                         kde=False, rug_kws={'height': 0.5})
-        matplotlib.pyplot.xlim(0, 1)
-        ax2.set_xticklabels([])
-        ax2.set_yticklabels([])
-        ax2.set_xlim(-.1, 1.1)
-        ax2.tick_params(axis='both', which='both', length=0)
-        ax2.xaxis.label.set_visible(False)
-        matplotlib.pyplot.xlim(0, 1)
-        ax1.set_title(title, fontsize = 16)
-        if singledir:
-            # if single direction then label ranks on bottom axis
-            ax2.set_xlabel('Ranks', fontsize=12)
-        else:
-            # add down barcode and label as ranks
-            seaborn.distplot(ranks_down[sample], hist=False, rug=True,
-                             color=colour_2,
-                             ax=ax3,
+            # plot the barcodes
+            seaborn.distplot(ranks[sample], hist=False, rug=True,
+                             color=colour_1,
+                             ax=ax2,
                              kde=False, rug_kws={'height': 0.5})
-            # ax3.set_xticklabels([])
-            ax3.set_yticklabels([])
-            ax3.tick_params(axis='both', which='both', length=0)
-            ax3.set_xlabel('Normalised Ranks', fontsize=16)
+            matplotlib.pyplot.xlim(0, 1)
+            ax2.set_xticklabels([])
+            ax2.set_yticklabels([])
+            ax2.set_xlim(-.1, 1.1)
+            ax2.tick_params(axis='both', which='both', length=0)
+            ax2.xaxis.label.set_visible(False)
+            matplotlib.pyplot.xlim(0, 1)
+            ax1.set_title(title, fontsize = 16)
+            if singledir:
+                # if single direction then label ranks on bottom axis
+                ax2.set_xlabel('Ranks', fontsize=12)
+            else:
+                # add down barcode and label as ranks
+                seaborn.distplot(ranks_down[sample], hist=False, rug=True,
+                                 color=colour_2,
+                                 ax=ax3,
+                                 kde=False, rug_kws={'height': 0.5})
+                # ax3.set_xticklabels([])
+                ax3.set_yticklabels([])
+                ax3.tick_params(axis='both', which='both', length=0)
+                ax3.set_xlabel('Normalised Ranks', fontsize=16)
 
-        seaborn.despine()
-        # update counter to move to the next panel
-        counter = counter + 1
-    if output:
-        matplotlib.pyplot.savefig(output)
-    if show:
-        matplotlib.pyplot.show()
+            seaborn.despine()
+            # update counter to move to the next panel
+            counter = counter + 1
+        if output:
+            matplotlib.pyplot.savefig(output)
+        if show:
+            matplotlib.pyplot.show()
 
-    return fig
+        return fig
+
+    except InvalidGrid:
+        print('Please define a grid large enough for ' + str(len(
+            ranks.columns))
+              + ' samples')
 
 def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
                     False, teststring= False, testlabel = False, colour_1 =
@@ -703,7 +784,7 @@ def empiricalpval(permutations, score):
         if sample in score.index:
             # extract the score
             s = score.get_value(sample, 'total_score')
-            print(s)
+
             # calculate r = number of permutated scores greater than the
             # actual score
             r = len(permutations[permutations[sample]>s]) + 1
@@ -742,44 +823,50 @@ def nulldistribution(permutations, score,  nrows = 1, ncols = 1,
     :param threshold: a significance threshold to mark on the graph
     :return: matplotlib.figure.Figure
     """
+    try:
+        # set the style of the graphs to have no background or spines
+        seaborn.set_style('ticks')
+        # check if grid dimensions are appropriate
+        if (nrows * ncols) < len(score.index):
+            raise InvalidGrid
+        # define the grid set up for the plots
+        grid = definegrid(nrows=nrows, ncols=ncols)
+        grid_outer = grid[0]
+        ax_list = grid[1]
+        # set figure size
+        fig = matplotlib.pyplot.figure(figsize=(5 * ncols, 5 * nrows))
 
-    # set the style of the graphs to have no background or spines
-    seaborn.set_style('ticks')
+        for p in permutations:
 
-    # define the grid set up for the plots
-    grid = definegrid(nrows=nrows, ncols=ncols)
-    grid_outer = grid[0]
-    ax_list = grid[1]
-    # set figure size
-    fig = matplotlib.pyplot.figure(figsize=(5 * ncols, 5 * nrows))
+            # set the placement of the graph
+            inner = gridspec.GridSpecFromSubplotSpec(nrows=1, ncols=1,
+                                                 subplot_spec=
+                                                 grid_outer[ax_list[counter]])
+            counter = counter + 1
+            ax = fig.add_subplot(inner[0, 0])
+            # distribution plot
+            seaborn.distplot(permutations[p],hist=True, kde_kws={'color':color},
+                             label='null distribution',ax=ax, hist_kws={
+                    'color':color})
+            ax.set_xlabel('Score')
+            ax.set_ylabel('Density')
+            ax.axvline(score.get_value(p,'total_score'), color = 'b')
+            # if threshold is true then calculate what the 0.05 ie 95th percentile
+            if threshold:
+                t = numpy.percentile(permutations[p], ((1-threshold)*100))
+                ax.axvline(x = t, color = 'r', linestyle = 'dashed' )
+            ax.set_title(p)
+            seaborn.despine()
 
-    for p in permutations:
+        if outpath:
+            matplotlib.pyplot.savefig(outpath)
+        if show:
+            matplotlib.pyplot.show()
 
-        # set the placement of the graph
-        inner = gridspec.GridSpecFromSubplotSpec(nrows=1, ncols=1,
-                                             subplot_spec=
-                                             grid_outer[ax_list[counter]])
-        counter = counter + 1
-        ax = fig.add_subplot(inner[0, 0])
-        # distribution plot
-        seaborn.distplot(permutations[p],hist=True, kde_kws={'color':color},
-                         label='null distribution',ax=ax, hist_kws={
-                'color':color})
-        ax.set_xlabel('Score')
-        ax.set_ylabel('Density')
-        ax.axvline(score.get_value(p,'total_score'), color = 'b')
-        # if threshold is true then calculate what the 0.05 ie 95th percentile
-        if threshold:
-            t = numpy.percentile(permutations[p], ((1-threshold)*100))
-            ax.axvline(x = t, color = 'r', linestyle = 'dashed' )
-        ax.set_title(p)
-        seaborn.despine()
-
-    if outpath:
-        matplotlib.pyplot.savefig(outpath)
-    if show:
-        matplotlib.pyplot.show()
-
-    return fig
+        return fig
+    except InvalidGrid:
+            print('Please define a grid large enough for ' + str(len(score.
+                                                                columns))+
+                  ' samples')
 
 
