@@ -93,3 +93,7 @@ for significance test
 
     nulldistribution(permutations=permd, score=scored_data, nrows=2, ncols=5,
                   threshold=0.05, show=True)
+
+
+The above script, with example input and output are also supplied in
+https://github.com/kristyhoran/singscore/tree/master/singscore/test
