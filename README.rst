@@ -12,6 +12,9 @@ singscore
 
 **Brief Description:** This collection of methods will take a gene set or signature and a single sample (although multiple samples are also acceptable) and return a score reflective of the gene-set or signature enrichment for that single sample.
 
+An example workflow can be seen on the `singscore wiki <https://github
+.com/kristyhoran/singscore/wiki>`_
+
 Install
 -------
 Ensure that you have git installed, in Terminal
@@ -94,6 +97,9 @@ for significance test
     nulldistribution(permutations=permd, score=scored_data, nrows=2, ncols=5,
                   threshold=0.05, show=True)
 
+
+.. image:: /test/output/barcode.png
+    :width: 100%
 
 The above script, with example input and output are also supplied in
 https://github.com/kristyhoran/singscore/tree/master/singscore/test
