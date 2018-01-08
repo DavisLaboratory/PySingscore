@@ -55,7 +55,9 @@ direction of the gene-set
     up = sigs[sigs['upDown'] == 'up']
     down = sigs[sigs['upDown'] == 'down']
 
-and get a list of ids
+and get a list of ids. Alternatively, a path to the up and/or down
+signatures may be supplied. The target file should be a text file, with each
+ identifier on a new line and with no headings or other characters.
 ::
 
     up = list(up['EntrezID'])
