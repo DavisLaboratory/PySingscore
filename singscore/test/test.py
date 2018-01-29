@@ -1,8 +1,13 @@
-import unittest, pandas,os, matplotlib
-from singscore.singscore import score,rank, permutate, empiricalpval, \
+import unittest, pandas,os, matplotlib, os
+from ..singscore import score,rank, permutate, empiricalpval, \
     plotrankdist, nulldistribution, plotdispersion
 
+
+BASE_DIR = os.path.dirname(__file__)or'.'
+
 class SingscoreTestCase(unittest.TestCase):
+
+
 
 
     def test_score_same_identifiers(self):
@@ -11,14 +16,16 @@ class SingscoreTestCase(unittest.TestCase):
 
         :return: .
         """
-        file_path = (os.path.dirname(__file__)) + \
-                    '/test_data/entrez_sample.txt'
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            'test_data/entrez_sample.txt'))
+
         f = open(file_path, 'r')
         sample = pandas.read_csv(f, header='infer', sep='\t')
         sample = sample.set_index(keys=sample.columns[0])
         f.close()
         # prepare signatures
-        sig_path = (os.path.dirname(__file__)) + '/test_sigs/tgfb_upDown.txt'
+        sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
         sigs = pandas.read_csv(sig, header=
         'infer', sep='\t')
@@ -39,14 +46,16 @@ class SingscoreTestCase(unittest.TestCase):
 
         :return: .
         """
-        file_path = (os.path.dirname(__file__)) + \
-                    '/test_data/entrez_sample.txt'
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            'test_data/entrez_sample.txt'))
+
         f = open(file_path, 'r')
         sample = pandas.read_csv(f, header='infer', sep='\t')
         sample = sample.set_index(keys=sample.columns[0])
         f.close()
         # prepare signatures
-        sig_path = (os.path.dirname(__file__)) +'/test_sigs/tgfb_upDown.txt'
+        sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
         sigs = pandas.read_csv(sig, header=
         'infer', sep='\t')
@@ -67,8 +76,8 @@ class SingscoreTestCase(unittest.TestCase):
         test permutations() using only 10 reps for speed.
         :return: .
         """
-        file_path = (os.path.dirname(__file__)) + \
-                    '/test_data/entrez_sample.txt'
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            'test_data/entrez_sample.txt'))
         f = open(file_path, 'r')
 
         sample = pandas.read_csv(f, header='infer', sep='\t')
@@ -82,14 +91,15 @@ class SingscoreTestCase(unittest.TestCase):
         test empirical_pval() using only 10 reps for speed.
         :return: .
         """
-        file_path = (os.path.dirname(__file__)) + \
-                    '/test_data/entrez_sample.txt'
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            'test_data/entrez_sample.txt'))
         f = open(file_path, 'r')
         sample = pandas.read_csv(f, header='infer', sep='\t')
         sample = sample.set_index(keys=sample.columns[0])
         f.close()
         # prepare signatures
-        sig_path = (os.path.dirname(__file__)) + '/test_sigs/tgfb_upDown.txt'
+        sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
         sigs = pandas.read_csv(sig, header=
         'infer', sep='\t')
@@ -108,15 +118,15 @@ class SingscoreTestCase(unittest.TestCase):
                               pandas.DataFrame)
 
     def test_barcode(self):
-
-        file_path = (os.path.dirname(__file__)) + \
-                    '/test_data/entrez_sample.txt'
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            'test_data/entrez_sample.txt'))
         f = open(file_path, 'r')
         sample = pandas.read_csv(f, header='infer', sep='\t')
         sample = sample.set_index(keys=sample.columns[0])
         f.close()
         # prepare signatures
-        sig_path = (os.path.dirname(__file__)) + '/test_sigs/tgfb_upDown.txt'
+        sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                                '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
         sigs = pandas.read_csv(sig, header=
         'infer', sep='\t')
@@ -135,15 +145,15 @@ class SingscoreTestCase(unittest.TestCase):
                               matplotlib.figure.Figure)
 
     def test_dispersion_plot(self):
-
-        file_path = (os.path.dirname(__file__)) + \
-                    '/test_data/entrez_sample.txt'
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            'test_data/entrez_sample.txt'))
         f = open(file_path, 'r')
         sample = pandas.read_csv(f, header='infer', sep='\t')
         sample = sample.set_index(keys=sample.columns[0])
         f.close()
         # prepare signatures
-        sig_path = (os.path.dirname(__file__)) + '/test_sigs/tgfb_upDown.txt'
+        sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
         sigs = pandas.read_csv(sig, header=
         'infer', sep='\t')
@@ -161,15 +171,15 @@ class SingscoreTestCase(unittest.TestCase):
                               matplotlib.figure.Figure)
 
     def test_null_dist(self):
-
-        file_path = (os.path.dirname(__file__)) + \
-                    '/test_data/entrez_sample.txt'
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            'test_data/entrez_sample.txt'))
         f = open(file_path, 'r')
         sample = pandas.read_csv(f, header='infer', sep='\t')
         sample = sample.set_index(keys=sample.columns[0])
         f.close()
         # prepare signatures
-        sig_path = (os.path.dirname(__file__)) + '/test_sigs/tgfb_upDown.txt'
+        sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                            '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
         sigs = pandas.read_csv(sig, header=
         'infer', sep='\t')

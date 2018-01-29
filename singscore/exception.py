@@ -1,22 +1,16 @@
-class error(Exception):
-    """
-    Base class for other exceptions
-    """
-    pass
-
-class InvalidNormalisation(error):
+class InvalidNormalisation(Exception):
     """
     Raised when an invalid normalisation string is entered
     """
     pass
 
-class InvalidIDType(error):
+class InvalidIDType(Exception):
     """
     Raised when the gene identifier types don't match
     """
     pass
 
-class InvalidGrid(error):
+class InvalidGrid(Exception):
     """
     Raised when the grid for graphs is not of sufficient dimensions
     """

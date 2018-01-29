@@ -1,4 +1,5 @@
 import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot
 import numpy
 import pandas
@@ -7,8 +8,11 @@ import statsmodels.robust.scale
 
 from matplotlib import gridspec, patches
 
-from exception import InvalidNormalisation, InvalidIDType, InvalidGrid
+from .exception import InvalidNormalisation, InvalidIDType, InvalidGrid
 
+import logging
+
+logger = logging.getLogger('singscore')
 
 def getsignature(path):
     """
@@ -31,12 +35,14 @@ def getsignature(path):
         return s
 
     except OSError as os:
-        print('An incorrect input type has been entered for signature '
+        logger.exception('An incorrect input type has been entered for signature '
               'path, please try again. \nDescription: {0}'.format(os))
+        raise
 
     except TypeError as te:
-        print('Incorrect data type, please enter the correct signature path. \n'
-              'Description: {0}'.format(te))
+        logger.exception('Incorrect data type, please enter the correct signature '
+                'path. \n Description: {0}'.format(te))
+        raise
 
 def checkids(up_gene, sample_index, down_gene = False):
 
@@ -44,14 +50,14 @@ def checkids(up_gene, sample_index, down_gene = False):
     if any(isinstance(x, (str)) for x in up_gene) != any(isinstance(x, (str))
                                                          for x in
                                                          list(sample_index)):
-        print('up signature and sample are not the same')
-        raise InvalidIDType
+
+        raise InvalidIDType('up signature and sample are not the same')
 
     if any(isinstance(x, (int)) for x in up_gene) != any(isinstance(x, (int))
                                                          for x in
                                                          list(sample_index)):
-        print('up signature and sample  are not the same')
-        raise InvalidIDType
+
+        raise InvalidIDType('up signature and sample  are not the same')
 
     if down_gene != False:
         if any(isinstance(x, (str)) for x in down_gene) != any(isinstance(x,
@@ -60,8 +66,7 @@ def checkids(up_gene, sample_index, down_gene = False):
                                                                for x in
                                                                list(
                                                                    sample_index)):
-            print('down signature and sample are not the same')
-            raise InvalidIDType
+            raise InvalidIDType('down signature and sample are not the same')
 
         if any(isinstance(x, (int)) for x in down_gene) != any(isinstance(x,
                                                                           (
@@ -69,22 +74,19 @@ def checkids(up_gene, sample_index, down_gene = False):
                                                                for x in
                                                                list(
                                                                    sample_index)):
-            print('down signature and sample are not the same')
-            raise InvalidIDType
+            raise InvalidIDType('down signature and sample are not the same')
 
         if any(isinstance(x, (int)) for x in up_gene) != any(isinstance(x,
                                                                         (int))
                                                              for x in
                                                              down_gene):
-            print('up and down signatures are not the same')
-            raise InvalidIDType
+            raise InvalidIDType('up and down signatures are not the same')
 
         if any(isinstance(x, (str)) for x in up_gene) != any(isinstance(x,
                                                                         (str))
                                                              for x in
                                                              down_gene):
-            print('up and down signatures not the same')
-            raise InvalidIDType
+            raise InvalidIDType('up and down signatures not the same')
 
 
 def normalisation(norm_method, score_list, score, library_len, sig_len,
@@ -114,10 +116,11 @@ def normalisation(norm_method, score_list, score, library_len, sig_len,
                 u = numpy.array(score_list)
         return norm
 
-        raise InvalidNormalisation
+
 
     except:
-        print('Normalisation method must be standard or theoretical.')
+        logger.exception('Normalisation method must be standard or theoretical.')
+        raise InvalidNormalisation
 
 def normalisation_rank(norm_method, ranks, library_len, sig_len):
 
@@ -140,9 +143,9 @@ def normalisation_rank(norm_method, ranks, library_len, sig_len):
 
         return ranks
 
-    except InvalidNormalisation:
-        print('Normalisation method must be standard or theoretical.')
-
+    except:
+        logger.exception('Normalisation method must be standard or theoretical.')
+        raise InvalidNormalisation
 
 def score(up_gene, sample, down_gene = False, norm_method = 'standard',
           norm_down = 0, full_data= False, centering = True):
@@ -282,9 +285,9 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
                 data = data.append(temp_df)
         return data
 
-    except InvalidIDType:
-        print('The gene identifiers are not of the same type.')
-
+    except:
+        logger.exception('The gene identifiers are not of the same type.')
+        raise  InvalidIDType
 
 
 def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
@@ -395,9 +398,9 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
 
         return (ranks)
 
-    except InvalidIDType:
-        print('The gene identifiers are not of the same type.')
-
+    except:
+        logger.exception('The gene identifiers are not of the same type.')
+        raise InvalidIDType
 
 
 def definegrid(nrows , ncols ):
@@ -563,10 +566,12 @@ def plotrankdist(ranks, nrows= 1, ncols = 1, counter = 0, t = False, colour_1 =
 
         return fig
 
-    except InvalidGrid:
-        print('Please define a grid large enough for ' + str(len(
+    except:
+        logger.exception('Please define a grid large enough for ' + str(len(
             ranks.columns))
               + ' samples')
+        raise InvalidGrid
+
 
 def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
                     False, teststring= False, testlabel = False, colour_1 =
@@ -676,7 +681,7 @@ def plotdispersion(score, nrows = 1, ncols = 1, counter = 0, ctrlstring =
 
         return fig
     else:
-        print('No dispersion values present, please re-run score with '
+        logger.info('No dispersion values present, please re-run score with '
               'full_data = True')
 
 
@@ -864,9 +869,9 @@ def nulldistribution(permutations, score,  nrows = 1, ncols = 1,
             matplotlib.pyplot.show()
 
         return fig
-    except InvalidGrid:
-            print('Please define a grid large enough for ' + str(len(score.
-                                                                columns))+
-                  ' samples')
+    except:
+            logger.exception('Please define a grid large enough for ' + str(len(score.
+                             columns))+' samples')
+            raise InvalidGrid
 
 
