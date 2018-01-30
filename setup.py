@@ -11,7 +11,7 @@ setup(name='singscore',
       author='Kristy Horan',
       author_email='kristyhoran15@gmail.com',
       license='MIT',
-      packages=['singscore'],
+      packages=['singscore', 'singscore.test'],
       install_requires=[
           'pandas','numpy','matplotlib','seaborn','scipy', 'statsmodels'
       ],

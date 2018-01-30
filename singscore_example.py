@@ -30,6 +30,8 @@ scored_data = score(up_gene=up, down_gene=down, sample=data,
                     norm_method='theoretical', full_data=True)
 # print(scored_data)
 
+
+
 # plot dispersion of scores
 output_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                     'singscore/test/output/dispersion.png'))
@@ -42,7 +44,7 @@ plotdispersion(scored_data, ctrlstring='Ctrl', teststring='TGFb',
 # plotting distribution of ranks single sample, D_Ctrl_R1 -  first find ranks
 ranked_data = rank(up_gene=up, down_gene=down, sample=data[['D_Ctrl_R1']],
                    norm_method='theoretical')
-
+# print(ranked_data)
 # plot
 output_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                     'singscore/test/output/barcode.png'))
@@ -54,6 +56,6 @@ output_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                         'singscore/test/output/nulldist.png'))
 permd = permutate(data, n_up=193, n_down=108)
 pvals = empiricalpval(permutations=permd, score=scored_data)
-print(pvals)
+# print(pvals)
 nulldistribution(permutations=permd, score=scored_data, nrows=2, ncols=5,
                  threshold=0.05, outpath=output_path, show=False)

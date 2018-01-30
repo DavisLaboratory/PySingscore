@@ -2,6 +2,7 @@ import unittest, pandas,os, matplotlib, os
 from ..singscore import score,rank, permutate, empiricalpval, \
     plotrankdist, nulldistribution, plotdispersion
 
+from pandas.util.testing import assert_frame_equal
 
 BASE_DIR = os.path.dirname(__file__)or'.'
 
@@ -36,9 +37,15 @@ class SingscoreTestCase(unittest.TestCase):
         # get a list of ids
         up = list(up['EntrezID'])
         down = list(down['EntrezID'])
+        test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                    'output/scored_data.txt'))
+        df = pandas.read_csv(open(test_data ,'r'), header='infer', sep='\t')
+        df = df.rename(columns={'Unnamed: 0': None})
+        df = df.set_index(keys=df.columns[0])
 
-        self.assertIsInstance(score(up_gene=up, down_gene=down,
-                                    sample= sample), pandas.DataFrame)
+        assert_frame_equal((score(up_gene=up, down_gene=down,
+                                    sample= sample,
+                                  norm_method='theoretical')), df)
 
     def test_rank_same_identifiers(self):
         """
@@ -65,11 +72,17 @@ class SingscoreTestCase(unittest.TestCase):
         # get a list of ids
         up = list(up['EntrezID'])
         down = list(down['EntrezID'])
-
-
         sig.close()
-        self.assertIsInstance(rank(up_gene=up, down_gene=down,
-                                    sample= sample), pandas.DataFrame)
+        # data to test df are correct
+        test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                                    'output/ranked_data.txt'))
+        df = pandas.read_csv(open(test_data, 'r'), header='infer', sep='\t')
+        df = df.rename(columns={'Unnamed: 0': None})
+        df = df.set_index(keys=df.columns[0])
+
+        assert_frame_equal((rank(up_gene=up, down_gene=down,
+                                  sample=sample,
+                                  norm_method='theoretical')), df)
 
     def test_permutation(self):
         """
@@ -81,9 +94,18 @@ class SingscoreTestCase(unittest.TestCase):
         f = open(file_path, 'r')
 
         sample = pandas.read_csv(f, header='infer', sep='\t')
+        sample = sample.set_index(keys=sample.columns[0])
         f.close()
-        self.assertIsInstance(permutate(sample=sample, n_up=50, n_down=50,
-                                        reps=10),pandas.DataFrame)
+
+        test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                                    'output/permd.txt'))
+        df = pandas.read_csv(open(test_data, 'r'), header='infer', sep='\t')
+        df = df.rename(columns={'Unnamed: 0': None})
+        df = df.set_index(keys=df.columns[0])
+        df.index = range(10)
+
+        assert_frame_equal(permutate(sample=sample, n_up=50, n_down=50,
+                                        reps=10),df)
 
 
     def test_pvalue(self):
@@ -113,6 +135,7 @@ class SingscoreTestCase(unittest.TestCase):
         p = permutate(sample=sample, n_up=50, n_down=50,
                                         reps=10)
         scores = score(up_gene=up, down_gene=down,sample=sample)
+
 
         self.assertIsInstance(empiricalpval(permutations=p, score=scores),
                               pandas.DataFrame)

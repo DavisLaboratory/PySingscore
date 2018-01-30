@@ -209,7 +209,7 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
             # index/rowname (the gene) and the sample that is equal to i
             for j in up_gene:
                 if j in up_sort.index:
-                    su.append(up_sort.get_value(j, i))
+                    su.append(up_sort[j])
                 else:
                     sig_len_up = sig_len_up -1
 
@@ -241,7 +241,7 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
                 # index/rowname (the gene) and the sample that is equal to i
                 for k in down_gene:
                     if k in sample.index:
-                        sd.append(down_sort.get_value(k,i))
+                        sd.append(down_sort[k])
                     else:
                         sig_len_down = sig_len_down - 1
 
@@ -349,7 +349,7 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
             # index/rowname (the gene) and the sample that is equal to i
             for j in up_gene:
                 if j in up_sort.index:
-                    su[i].append((j, up_sort.get_value(j,i)))
+                    su[i].append((j, up_sort[j]))
                 else:
                     len_up_sig = len_up_sig - 1
 
@@ -366,7 +366,7 @@ def rank(up_gene, sample, down_gene = False,norm_method = 'standard'):
                 # index/rowname (the gene) and the sample that is equal to i
                 for k in down_gene:
                     if k in sample.index:
-                        sd[i].append((k, down_sort.get_value(k,i)))
+                        sd[i].append((k, down_sort[k]))
                     else:
                         len_down_sig = len_down_sig - 1
 
@@ -729,7 +729,7 @@ def permutate(sample, n_up, n_down = False, reps= 10000, norm_method =
                 # find the rank of the genes
                 for ug in up_gene:
                     if ug in up_sort.index:
-                        ru.append(up_sort.get_value(ug,s))
+                        ru.append(up_sort[ug])
                 # calculate the mean of ranks
                 rs_up = numpy.mean(ru)
                 # normalise
@@ -748,7 +748,7 @@ def permutate(sample, n_up, n_down = False, reps= 10000, norm_method =
                     # find the rank of genes
                     for dg in down_gene:
                         if dg in down_sort.index:
-                            rd.append(down_sort.get_value(dg, s))
+                            rd.append(down_sort[dg])
                     # find the mean down rank
                     rs_down = numpy.mean(rd)
                     # normalise
@@ -788,7 +788,7 @@ def empiricalpval(permutations, score):
         # check if the sample is the same as the row in score
         if sample in score.index:
             # extract the score
-            s = score.get_value(sample, 'total_score')
+            s = score.at[sample, 'total_score']
 
             # calculate r = number of permutated scores greater than the
             # actual score
