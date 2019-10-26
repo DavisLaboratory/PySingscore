@@ -110,10 +110,12 @@ class SingscoreTestCase(unittest.TestCase):
         df = pandas.read_csv(open(test_data, 'r'), header='infer', sep='\t')
         df = df.rename(columns={'Unnamed: 0': None})
         df = df.set_index(keys=df.columns[0])
+        df_columns = df.columns.tolist()
 
-        assert_frame_equal((rank(up_gene=up, down_gene=down,
-                                  sample=sample,
-                                  norm_method='theoretical')), df)
+        assert_frame_equal((rank(up_gene=up,
+                                 down_gene=down,
+                                 sample=sample,
+                                 norm_method='theoretical')[df_columns]), df)
 
     def test_permutation(self):
         """
