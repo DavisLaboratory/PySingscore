@@ -855,7 +855,7 @@ def nulldistribution(permutations, score,  nrows = 1, ncols = 1,
                     'color':color})
             ax.set_xlabel('Score')
             ax.set_ylabel('Density')
-            ax.axvline(score.get_value(p,'total_score'), color = 'b')
+            ax.axvline(score.at[p,'total_score'], color = 'b')
             # if threshold is true then calculate what the 0.05 ie 95th percentile
             if threshold:
                 t = numpy.percentile(permutations[p], ((1-threshold)*100))
