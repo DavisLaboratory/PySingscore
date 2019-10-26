@@ -1,4 +1,4 @@
-import unittest, pandas,os, matplotlib, os
+import unittest, pandas, matplotlib, os
 from ..singscore import score,rank, permutate, empiricalpval, \
     plotrankdist, nulldistribution, plotdispersion
 
@@ -28,8 +28,7 @@ class SingscoreTestCase(unittest.TestCase):
         sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                             '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
-        sigs = pandas.read_csv(sig, header=
-        'infer', sep='\t')
+        sigs = pandas.read_csv(sig, header='infer', sep='\t')
         sig.close()
         # subset the data for up and down
         up = sigs[sigs['upDown'] == 'up']
@@ -45,6 +44,39 @@ class SingscoreTestCase(unittest.TestCase):
 
         assert_frame_equal((score(up_gene=up, down_gene=down,
                                     sample= sample,
+                                  norm_method='theoretical')), df)
+
+    def test_score_upsignatures(self):
+        """
+        test score() when only up-signatures provided
+
+        :return: .
+        """
+        file_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                                    'test_data/entrez_sample.txt'))
+
+        f = open(file_path, 'r')
+        sample = pandas.read_csv(f, header='infer', sep='\t')
+        sample = sample.set_index(keys=sample.columns[0])
+        f.close()
+        # prepare signatures
+        sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                                   '/test_sigs/tgfb_upDown.txt'))
+        sig = open(sig_path, 'r')
+        sigs = pandas.read_csv(sig, header='infer', sep='\t')
+        sig.close()
+        # subset the data for up and down
+        up = sigs[sigs['upDown'] == 'up']
+        # get a list of ids
+        up = list(up['EntrezID'])
+        test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
+                                                    'output/scored_data_up.txt'))
+        df = pandas.read_csv(open(test_data, 'r'), header='infer', sep='\t')
+        df = df.rename(columns={'Unnamed: 0': None})
+        df = df.set_index(keys=df.columns[0])
+
+        assert_frame_equal((score(up_gene=up,
+                                  sample=sample,
                                   norm_method='theoretical')), df)
 
     def test_rank_same_identifiers(self):
@@ -64,8 +96,7 @@ class SingscoreTestCase(unittest.TestCase):
         sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                             '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
-        sigs = pandas.read_csv(sig, header=
-        'infer', sep='\t')
+        sigs = pandas.read_csv(sig, header='infer', sep='\t')
         # subset the data for up and down
         up = sigs[sigs['upDown'] == 'up']
         down = sigs[sigs['upDown'] == 'down']
@@ -123,8 +154,7 @@ class SingscoreTestCase(unittest.TestCase):
         sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                             '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
-        sigs = pandas.read_csv(sig, header=
-        'infer', sep='\t')
+        sigs = pandas.read_csv(sig, header='infer', sep='\t')
         sig.close()
         # subset the data for up and down
         up = sigs[sigs['upDown'] == 'up']
@@ -151,8 +181,7 @@ class SingscoreTestCase(unittest.TestCase):
         sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                                 '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
-        sigs = pandas.read_csv(sig, header=
-        'infer', sep='\t')
+        sigs = pandas.read_csv(sig, header='infer', sep='\t')
         sig.close()
         # subset the data for up and down
         up = sigs[sigs['upDown'] == 'up']
@@ -178,8 +207,7 @@ class SingscoreTestCase(unittest.TestCase):
         sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                             '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
-        sigs = pandas.read_csv(sig, header=
-        'infer', sep='\t')
+        sigs = pandas.read_csv(sig, header='infer', sep='\t')
         sig.close()
         # subset the data for up and down
         up = sigs[sigs['upDown'] == 'up']
@@ -204,8 +232,7 @@ class SingscoreTestCase(unittest.TestCase):
         sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                             '/test_sigs/tgfb_upDown.txt'))
         sig = open(sig_path, 'r')
-        sigs = pandas.read_csv(sig, header=
-        'infer', sep='\t')
+        sigs = pandas.read_csv(sig, header='infer', sep='\t')
         sig.close()
         # subset the data for up and down
         up = sigs[sigs['upDown'] == 'up']
