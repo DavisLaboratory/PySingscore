@@ -196,7 +196,9 @@ def score(up_gene, sample, down_gene = False, norm_method = 'standard',
 
         # for calculating normalisation
         sig_len_up = len(up_gene)
-        sig_len_down = len(down_gene)
+
+        if down_gene != False:
+            sig_len_down = len(down_gene)
 
         for i in sample.columns:
             # rank the genes -> Ties will be taken as the rank of the first
@@ -873,5 +875,3 @@ def nulldistribution(permutations, score,  nrows = 1, ncols = 1,
             logger.exception('Please define a grid large enough for ' + str(len(score.
                              columns))+' samples')
             raise InvalidGrid
-
-
