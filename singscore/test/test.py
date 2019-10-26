@@ -38,7 +38,7 @@ class SingscoreTestCase(unittest.TestCase):
         down = list(down['EntrezID'])
         test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
                                     'output/scored_data.txt'))
-        df = pandas.read_csv(open(test_data ,'r'), header='infer', sep='\t')
+        df = pandas.read_csv(test_data, header='infer', sep='\t')
         df = df.rename(columns={'Unnamed: 0': None})
         df = df.set_index(keys=df.columns[0])
 
@@ -71,7 +71,7 @@ class SingscoreTestCase(unittest.TestCase):
         up = list(up['EntrezID'])
         test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
                                                     'output/scored_data_up.txt'))
-        df = pandas.read_csv(open(test_data, 'r'), header='infer', sep='\t')
+        df = pandas.read_csv(test_data, header='infer', sep='\t')
         df = df.rename(columns={'Unnamed: 0': None})
         df = df.set_index(keys=df.columns[0])
 
@@ -107,7 +107,7 @@ class SingscoreTestCase(unittest.TestCase):
         # data to test df are correct
         test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
                                                     'output/ranked_data.txt'))
-        df = pandas.read_csv(open(test_data, 'r'), header='infer', sep='\t')
+        df = pandas.read_csv(test_data, header='infer', sep='\t')
         df = df.rename(columns={'Unnamed: 0': None})
         df = df.set_index(keys=df.columns[0])
         df_columns = df.columns.tolist()
@@ -132,7 +132,7 @@ class SingscoreTestCase(unittest.TestCase):
 
         test_data = os.path.normpath('{}/{}'.format(BASE_DIR,
                                                     'output/permd.txt'))
-        df = pandas.read_csv(open(test_data, 'r'), header='infer', sep='\t')
+        df = pandas.read_csv(test_data, header='infer', sep='\t')
         df = df.rename(columns={'Unnamed: 0': None})
         df = df.set_index(keys=df.columns[0])
         df.index = range(10)
@@ -182,9 +182,7 @@ class SingscoreTestCase(unittest.TestCase):
         # prepare signatures
         sig_path = os.path.normpath('{}/{}'.format(BASE_DIR,
                                                 '/test_sigs/tgfb_upDown.txt'))
-        sig = open(sig_path, 'r')
-        sigs = pandas.read_csv(sig, header='infer', sep='\t')
-        sig.close()
+        sigs = pandas.read_csv(sig_path, header='infer', sep='\t')
         # subset the data for up and down
         up = sigs[sigs['upDown'] == 'up']
         down = sigs[sigs['upDown'] == 'down']
